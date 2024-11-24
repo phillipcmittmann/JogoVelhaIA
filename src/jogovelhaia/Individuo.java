@@ -21,45 +21,14 @@ public class Individuo {
         this.avaliacao = 0;
     }
 
-    // revisar isso
-    // Avalia o desempenho do indivíduo com base no jogo da velha
-    public void avaliar(double[] entradas, int[][] tabuleiro) {
-        // Obtém o vetor de saídas da rede neural para as 9 posições
-        double[] saídas = neuronio.calcularSaida(entradas);
-
-        // Encontrar a melhor jogada (a maior saída)
-        double melhorValor = -Double.MAX_VALUE;
-        int melhorPosicao = -1;
-        for (int i = 0; i < saídas.length; i++) {
-            // Considera a jogada apenas se a posição estiver vazia (tabuleiro[i] == 0)
-            if (tabuleiro[i / 3][i % 3] == 0 && saídas[i] > melhorValor) {
-                melhorValor = saídas[i];
-                melhorPosicao = i;
-            }
-        }
-
-        // Avaliação baseada na melhor jogada
-        if (melhorPosicao != -1) {
-            // Exemplo de um sistema de pontuação de vitórias, derrotas e empates
-            int linha = melhorPosicao / 3;
-            int coluna = melhorPosicao % 3;
-            
-            // Simule a jogada no tabuleiro (apenas a jogada do indivíduo)
-            tabuleiro[linha][coluna] = 1; // Supondo que o indivíduo jogue como X
-
-            // Verifique o resultado do jogo (vitória, derrota, empate)
-            if (verificarVitoria(tabuleiro, 1)) {
-                this.avaliacao = 1;  // Vitória
-            } else if (verificarEmpate(tabuleiro)) {
-                this.avaliacao = 0;  // Empate
-            } else {
-                this.avaliacao = -1; // Derrota
-            }
-            
-            // Restaurar o tabuleiro (retirar a jogada do indivíduo)
-            tabuleiro[linha][coluna] = 0;
-        } else {
-            this.avaliacao = -1;  // Caso não haja jogada válida
+    public void avaliar(double[] entradas, int[][] tabuleiro, int resultado) {
+        // A avaliação é determinada pelo resultado do jogo
+        if (resultado == 1) {
+            this.avaliacao = 1;  // Vitória da rede neural
+        } else if (resultado == -1) {
+            this.avaliacao = -1; // Derrota
+        } else if (resultado == 2) {
+            this.avaliacao = 0.5; // Empate
         }
     }
     
@@ -112,9 +81,9 @@ public class Individuo {
     // Mutação
     public void mutar() {
         Random rand = new Random();
-        int indice = rand.nextInt(9);
-        double novoPeso = (rand.nextDouble() * 2) - 1;
-        neuronio.getPesos()[indice] = novoPeso;
+        int indice = rand.nextInt(9);  // Seleciona aleatoriamente um índice de peso
+        double novoPeso = (rand.nextDouble() * 2) - 1;  // Gera um novo peso entre -1 e 1
+        neuronio.getPesos()[indice] = novoPeso;  // Altera o peso no índice escolhido
     }
 
     public Neuronio getNeuronio() {
