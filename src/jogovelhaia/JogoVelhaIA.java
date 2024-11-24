@@ -1,15 +1,11 @@
 package jogovelhaia;
 
-import java.util.ArrayList;
 import java.util.Random;
 import java.util.Scanner;
 
-
-
 public class JogoVelhaIA {
-	private static int[][] tabuleiro = new int[3][3]; // Tabuleiro 3x3
+	private static int[][] tabuleiro = new int[3][3];
 
-    // Função para inicializar o tabuleiro
     public static void inicializarTabuleiro() {
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
@@ -18,7 +14,6 @@ public class JogoVelhaIA {
         }
     }
 
-    // Função para imprimir o tabuleiro
     public static void imprimirTabuleiro() {
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
@@ -27,19 +22,20 @@ public class JogoVelhaIA {
                 } else if (tabuleiro[i][j] == -1) {
                     System.out.print("O "); // Máquina
                 } else {
-                    System.out.print("- "); // Representa células vazias (0)
+                    System.out.print("- ");
                 }
             }
             System.out.println();
         }
+        
+        System.out.println();
     }
 
-    // Função para verificar se há um vencedor
     public static int verificarVencedor() {
         // Verificar linhas
         for (int i = 0; i < 3; i++) {
             if (tabuleiro[i][0] == tabuleiro[i][1] && tabuleiro[i][1] == tabuleiro[i][2] && tabuleiro[i][0] != 0) {
-                return tabuleiro[i][0]; // Retorna o vencedor (1 = X, -1 = O)
+                return tabuleiro[i][0]; // Retorna 1 (rede neural) ou -1 (computador)
             }
         }
 
@@ -58,7 +54,7 @@ public class JogoVelhaIA {
             return tabuleiro[0][2];
         }
 
-        // Verificar se há empate (sem mais espaços vazios)
+        // Verificar se há empate
         boolean temEspacosVazios = false;
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
@@ -68,37 +64,110 @@ public class JogoVelhaIA {
                 }
             }
         }
+
         if (!temEspacosVazios) {
             return 2; // Empate
         }
 
-        return -1; // O jogo continua
+        return 0; // O jogo continua (sem vencedor)
     }
+    
+    public static void avaliarJogada(Individuo individuo) {
+        // Verifica o estado do tabuleiro após a jogada da rede neural
+        int resultado = verificarVencedor();
 
- // Função para a jogada do jogador (X)
-    public static void jogadaJogador() {
-        Scanner scanner = new Scanner(System.in);
-        int linha, coluna;
-        
-        System.out.println("\n=========================================\n");
-
-        while (true) {
-            System.out.print("Digite a linha (0, 1, 2) para jogar X: ");
-            linha = scanner.nextInt();
-            System.out.print("Digite a coluna (0, 1, 2) para jogar X: ");
-            coluna = scanner.nextInt();
-
-            if (linha >= 0 && linha < 3 && coluna >= 0 && coluna < 3 && tabuleiro[linha][coluna] == 0) {
-                tabuleiro[linha][coluna] = 1; // Marca a jogada com X (1)
-                System.out.println("\nO jogador jogou em: " + linha + " " + coluna + "\n");
-                break;
+        // Se a rede neural venceu com a jogada, atribui uma alta aptidão
+        if (resultado == 1) {
+            individuo.setAvaliacao(1.0);  // Aptidão positiva, vitória
+        } else if (resultado == 2) {
+            individuo.setAvaliacao(0.5);  // Empate, aptidão média
+        } else {
+            // Se a rede neural não venceu, verificamos se ela bloqueou o computador
+            if (bloquearVitoriaComputador()) {
+                individuo.setAvaliacao(0.8);  // Aptidão alta por bloquear vitória do oponente
             } else {
-                System.out.println("Jogada inválida! Tente novamente.");
+                individuo.setAvaliacao(0.0);  // Jogada neutra (não ajudou nem prejudicou)
             }
         }
     }
 
-    // Função para a jogada do computador (O)
+    private static boolean bloquearVitoriaComputador() {
+        // Verificar se o computador (O) estava prestes a ganhar e a rede neural bloqueou
+        // Simula uma jogada de "O" e verifica se a jogada da rede neural evitou a vitória
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                if (tabuleiro[i][j] == 0) {
+                    tabuleiro[i][j] = -1;  // Tenta colocar o O (computador)
+                    if (verificarVencedor() == -1) {
+                        tabuleiro[i][j] = 0;  // Reverte a jogada
+                        return true;  // A jogada foi um bloqueio
+                    }
+                    tabuleiro[i][j] = 0;  // Reverte a jogada
+                }
+            }
+        }
+        return false;
+    }
+
+    public static boolean jogadaRedeNeural(Populacao populacao) {
+        // Avaliar a população passando tanto o vetor de entradas quanto o tabuleiro
+        populacao.avaliarPopulacao(tabuleiroParaVetor(tabuleiro), tabuleiro);
+
+        // Seleciona o melhor indivíduo da população
+        Individuo melhorIndividuo = populacao.selecionarIndividuo();
+
+        // Chama o método para escolher a melhor jogada baseada nas saídas da rede neural
+        int melhorPosicao = escolherMelhorJogada(melhorIndividuo, tabuleiro);
+
+        // Verifica se há uma posição válida para jogar
+        if (melhorPosicao == -1) {
+            System.out.println("Erro! A rede neural não encontrou uma posição válida.");
+            melhorIndividuo.setAvaliacao(-1);  // A avaliação é negativa porque a rede não jogou corretamente
+            return false; // A rede neural não conseguiu jogar
+        } else {
+            // Converte o índice da posição para linha e coluna
+            int linha = melhorPosicao / 3;
+            int coluna = melhorPosicao % 3;
+
+            // Faz a jogada no tabuleiro
+            tabuleiro[linha][coluna] = 1;  // O jogador da rede neural é representado por 1
+            
+            // Exibe a jogada
+            System.out.println(">>> Rede Neural escolheu - Linha: " + linha + " Coluna: " + coluna);
+            return true;  // A jogada foi bem-sucedida
+        }
+    }
+
+    // Método que escolhe a melhor jogada com base nas saídas da rede neural
+    public static int escolherMelhorJogada(Individuo individuo, int[][] tabuleiro) {
+        double[] jogada = individuo.getNeuronio().calcularSaida(tabuleiroParaVetor(tabuleiro));
+
+        int melhorPosicao = -1;
+        double melhorValor = -Double.MAX_VALUE;
+
+        // Itera sobre as saídas da rede neural e escolhe a posição com o maior valor de saída
+        for (int i = 0; i < jogada.length; i++) {
+            // Verifica se a posição está vazia e se a jogada é melhor
+            if (jogada[i] > melhorValor && tabuleiro[i / 3][i % 3] == 0) {
+                melhorValor = jogada[i];
+                melhorPosicao = i;
+            }
+        }
+
+        return melhorPosicao;  // Retorna a melhor posição
+    }
+    
+    public static double[] tabuleiroParaVetor(int[][] tabuleiro) {
+        double[] vetor = new double[9];
+        int index = 0;
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                vetor[index++] = tabuleiro[i][j];
+            }
+        }
+        return vetor;
+    }
+
     public static void jogadaComputador() {
         Random rand = new Random();
         int linha, coluna;
@@ -108,181 +177,193 @@ public class JogoVelhaIA {
             linha = rand.nextInt(3);  // Escolhe uma linha aleatória entre 0 e 2
             coluna = rand.nextInt(3); // Escolhe uma coluna aleatória entre 0 e 2
 
-            // Se a célula estiver vazia (0), o computador faz a jogada
             if (tabuleiro[linha][coluna] == 0) {
                 tabuleiro[linha][coluna] = -1; // Marca a jogada com O (-1)
                 break;
             }
         }
 
-        // Exibe a jogada do computador (linha e coluna escolhidas)
         System.out.println("O computador jogou em: " + linha + " " + coluna + "\n");
     }
     
-    public static void main(String[] args) {
+    public static void jogadaMinimax() {
+        int[][] velha = new int[3][3];
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                if (tabuleiro[i][j] == 0) 
+                    velha[i][j] = -1;  // Posição vazia
+                else if (tabuleiro[i][j] == 1) 
+                    velha[i][j] = 1;   // Posição do jogador
+                else 
+                    velha[i][j] = 0;   // Posição ocupada por "O" (computador)
+            }
+        }
 
-    	teste();
-    }
+        TestaMinimax mini = new TestaMinimax(velha);
 
-//    public static void main(String[] args) {
-//        Scanner scanner = new Scanner(System.in);
-//        
-//        while (true) {
-//            System.out.println("Digite a dificuldade que deseja jogar: 1- Fácil; 2- Médio 3- Difícil:");
-//            int dificuldade = scanner.nextInt();
-//            
-//            if (dificuldade == 1) {
-//                inicializarTabuleiro();
-//                int resultado = -1;
-//
-//                // Loop do jogo: continua enquanto não houver vencedor ou empate
-//                while (resultado == -1) {
-//                    imprimirTabuleiro();
-//                    jogadaJogador();  // Jogada do jogador
-//
-//                    // Verifica se há vencedor ou empate após a jogada do jogador
-//                    resultado = verificarVencedor();
-//                    if (resultado != -1) break;
-//
-//                    jogadaComputador();  // Jogada do computador
-//
-//                    // Verifica novamente após a jogada do computador
-//                    resultado = verificarVencedor();
-//                }
-//
-//                // Exibe o estado final do tabuleiro
-//                imprimirTabuleiro();
-//
-//                // Exibe o resultado final do jogo
-//                if (resultado == 1) {
-//                    System.out.println("Você venceu!");
-//                } else if (resultado == -1) {
-//                    System.out.println("O computador venceu!");
-//                } else {
-//                    System.out.println("Empate!");
-//                }
-//            }
-//            else if (dificuldade == 2) {
-//                inicializarTabuleiro();
-//                int resultado = -1;
-//                
-//                while (resultado == -1) {
-//                    imprimirTabuleiro();
-//                    jogadaJogador();  // Jogada do jogador
-//
-//                    // Verifica se há vencedor ou empate após a jogada do jogador
-//                    resultado = verificarVencedor();
-//                    if (resultado != -1) break;
-//                    
-//                    int randomInt = 1 + (int)(Math.random() * 2);
-//                    
-//                    if (randomInt == 1) {
-//                        jogadaComputador();  // Jogada do computador
-//                    } else {
-//                        // Exemplo com Minimax (se implementado)
-//                        TestaMinimax mini = new TestaMinimax(tabuleiro);
-//                        Sucessor melhor = mini.joga();
-//                        
-//                        System.out.println(">>> MINIMAX escolheu - Linha: " + melhor.getLinha() + " Coluna: " + melhor.getColuna());
-//
-//                        if(tabuleiro[melhor.getLinha()][melhor.getColuna()] != 0) {
-//                            System.out.println("Posicao ocupada");
-//                        } else {
-//                            tabuleiro[melhor.getLinha()][melhor.getColuna()] = -1;
-//                        }
-//                    }
-//                    
-//                    resultado = verificarVencedor();                    
-//                }
-//                
-//                imprimirTabuleiro();
-//                
-//                if (resultado == 1) {
-//                    System.out.println("Você venceu!");
-//                } else if (resultado == -1) {
-//                    System.out.println("O computador venceu!");
-//                } else {
-//                    System.out.println("Empate!");
-//                }
-//            } 
-//            else if (dificuldade == 3) {
-//                inicializarTabuleiro();
-//                int resultado = -1;
-//                
-//                while (resultado == -1) {
-//                    imprimirTabuleiro();
-//                    jogadaJogador();  // Jogada do jogador
-//
-//                    // Verifica se há vencedor ou empate após a jogada do jogador
-//                    resultado = verificarVencedor();
-//                    if (resultado != -1) break;
-//
-//                    // Exemplo com Minimax (se implementado)
-//                    TestaMinimax mini = new TestaMinimax(tabuleiro);
-//                    Sucessor melhor = mini.joga();
-//                    
-//                    System.out.println(">>> MINIMAX escolheu - Linha: " + melhor.getLinha() + " Coluna: " + melhor.getColuna());
-//
-//                    if(tabuleiro[melhor.getLinha()][melhor.getColuna()] != 0) {
-//                        System.out.println("Posicao ocupada");
-//                    } else {
-//                        tabuleiro[melhor.getLinha()][melhor.getColuna()] = -1;
-//                    }
-//                    
-//                    resultado = verificarVencedor();                    
-//                }
-//                
-//                imprimirTabuleiro();
-//                
-//                if (resultado == 1) {
-//                    System.out.println("Você venceu!");
-//                } else if (resultado == -1) {
-//                    System.out.println("O computador venceu!");
-//                } else {
-//                    System.out.println("Empate!");
-//                }
-//            } 
-//            else {
-//                System.out.println("Opção inválida.");
-//            }
-//        }
-//    }
+        while (true) {
+            Sucessor melhor = mini.joga();
 
-    public static void teste() {
-    	double[] tabuleiro = new double[9];
-    	for (int i = 0; i < tabuleiro.length; i++) {
-    		tabuleiro[i] = (Math.random() * 3) - 1;
-    	}
-    	
-    	ArrayList<Neuronio> camadaEntrada = new ArrayList<Neuronio>();
-    	ArrayList<Neuronio> camadaOculta = new ArrayList<Neuronio>();
-    	ArrayList<Neuronio> camadaSaida = new ArrayList<Neuronio>();
-    	
-    	// popula a camada de entrada
-    	for (int i = 0; i < 9; i++) {
-    		camadaEntrada.add(new Neuronio(tabuleiro));
-    		camadaOculta.add(new Neuronio());
-    		camadaSaida.add(new Neuronio());
-    	}
-    	
-    	
-    	// propagar
-        double[] saidaCamadaOculta = new double[9];
-        
-    	for (int i = 0; i < camadaOculta.size(); i++) {
-    		saidaCamadaOculta[i] = camadaOculta.get(i).calcularSaida(tabuleiro);
-    	}
-    	
-    	double[] saidaFinal = new double[9];
-    	
-    	for (int i = 0; i < camadaSaida.size(); i++) {
-    		saidaFinal[i] = camadaSaida.get(i).calcularSaida(saidaFinal);
-    	}
-    	
-    	System.out.println("Saída da rede:");
-        for (int i = 0; i < saidaFinal.length; i++) {
-            System.out.println("Saída " + (i+1) + ": " + saidaFinal[i]);
+            // Aqui, o Minimax deve verificar se a célula já foi ocupada antes de jogar
+            if (tabuleiro[melhor.getLinha()][melhor.getColuna()] == 0) {
+                System.out.println(">>> MINIMAX escolheu - Linha: " + melhor.getLinha() + " Coluna: " + melhor.getColuna());
+                tabuleiro[melhor.getLinha()][melhor.getColuna()] = -1; // O computador (O) joga
+                break;
+            } else {
+                // Caso a posição já esteja ocupada, tenta novamente
+                System.out.println("Posição já ocupada. Tentando outra posição...");
+            }
         }
     }
-    
+
+    public static void main(String[] args) {
+        while(true) {
+        	Scanner scanner = new Scanner(System.in);
+
+            Populacao populacao = new Populacao(180);
+
+            int geracao = 0;
+
+
+            System.out.println("\n==============================================\n");
+            
+            System.out.println("Digite a dificuldade que deseja jogar: 1- Fácil; 2- Médio 3- Difícil:");
+            int dificuldade = scanner.nextInt();
+
+            while (geracao < 100) {
+                geracao++;
+
+                if (dificuldade == 1) {
+                	inicializarTabuleiro();
+                    int resultado = 0;
+                    
+                    while (resultado == 0) {
+                        boolean jogadaValida = jogadaRedeNeural(populacao);
+                        imprimirTabuleiro();
+
+                        if (!jogadaValida) {
+                            System.out.println("A rede neural fez uma jogada inválida. Iniciando um novo jogo...\n\n");
+                            
+                            Individuo individuo = populacao.selecionarIndividuo();
+                            individuo.setAvaliacao(-1);
+                            
+                            break;
+                        }
+
+                        resultado = verificarVencedor();
+                        if (resultado != 0) break;
+
+                        jogadaComputador();
+                        imprimirTabuleiro();
+
+                        resultado = verificarVencedor();
+                    }
+                    
+                    imprimirTabuleiro();
+                    if (resultado == 1) {
+                        System.out.println("Rede Neural venceu!\n");
+                        Individuo individuo = populacao.selecionarIndividuo();
+                        individuo.setAvaliacao(1);
+                    } else if (resultado == -1) {
+                        System.out.println("O computador venceu!\n");
+                        Individuo individuo = populacao.selecionarIndividuo();
+                        individuo.setAvaliacao(-0.5);
+                    } else if (resultado == 2) {
+                        System.out.println("Empate!\n");
+                        Individuo individuo = populacao.selecionarIndividuo();
+                        individuo.setAvaliacao(0.5);
+                    }
+                }else if (dificuldade == 2) {
+                    inicializarTabuleiro();
+                    int resultado = 0;
+
+                    while (resultado == 0) {
+                        boolean jogadaValida = jogadaRedeNeural(populacao);
+                        imprimirTabuleiro();
+
+                        if (!jogadaValida) {
+                            System.out.println("A rede neural fez uma jogada inválida. Iniciando um novo jogo...\n\n");
+                            Individuo individuo = populacao.selecionarIndividuo();
+                            individuo.setAvaliacao(-1);
+                            break;
+                        }
+
+                        resultado = verificarVencedor();
+                        if (resultado != 0) break;
+
+                        // 50% chance de jogar aleatório ou usar Minimax
+                        Random rand = new Random();
+                        int randomInt = rand.nextInt(2); // 0 ou 1
+
+                        if (randomInt == 0) {
+                            jogadaComputador();  // Jogo aleatório
+                        } else {
+                            jogadaMinimax();  // Jogo usando Minimax
+                        }
+                        imprimirTabuleiro();
+
+                        resultado = verificarVencedor();
+                    }
+
+                    imprimirTabuleiro();
+                    if (resultado == 1) {
+                        System.out.println("Rede Neural venceu!\n");
+                        Individuo individuo = populacao.selecionarIndividuo();
+                        individuo.setAvaliacao(1);
+                    } else if (resultado == -1) {
+                        System.out.println("O computador venceu!\n");
+                        Individuo individuo = populacao.selecionarIndividuo();
+                        individuo.setAvaliacao(-0.5);
+                    } else if (resultado == 2) {
+                        System.out.println("Empate!\n");
+                        Individuo individuo = populacao.selecionarIndividuo();
+                        individuo.setAvaliacao(0.5);
+                    }
+                } else if (dificuldade == 3) {
+                	inicializarTabuleiro();
+                    int resultado = 0;
+
+                    while (resultado == 0) {
+                        // Jogada da Rede Neural
+                        boolean jogadaValida = jogadaRedeNeural(populacao);
+                        imprimirTabuleiro();
+
+                        if (!jogadaValida) {
+                            System.out.println("A rede neural fez uma jogada inválida. Iniciando um novo jogo...\n\n");
+                            break;
+                        }
+
+                        // Verifica se alguém venceu ou houve empate
+                        resultado = verificarVencedor();
+                        if (resultado != 0) break;
+
+                        // Jogada do Minimax
+                        jogadaMinimax();
+                        imprimirTabuleiro();
+
+                        // Verifica novamente após a jogada do Minimax
+                        resultado = verificarVencedor();
+                    }
+
+                    imprimirTabuleiro();
+                    if (resultado == 1) {
+                        System.out.println("Rede Neural venceu!\n");
+                        Individuo individuo = populacao.selecionarIndividuo();
+                        individuo.setAvaliacao(1);
+                    } else if (resultado == -1) {
+                        System.out.println("O computador venceu!\n");
+                        Individuo individuo = populacao.selecionarIndividuo();
+                        individuo.setAvaliacao(-0.5);
+                    } else if (resultado == 2) {
+                        System.out.println("Empate!\n");
+                        Individuo individuo = populacao.selecionarIndividuo();
+                        individuo.setAvaliacao(0.5);
+                    }
+                }
+                else {
+                    System.out.println("Opção inválida.");
+                }
+            }
+        }
+    }
 }

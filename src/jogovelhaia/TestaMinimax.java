@@ -19,7 +19,6 @@ public class TestaMinimax
             for(int j=0; j<3;j++)
                 if(tabuleiroVelha[i][j]==-1) velha[i][j]='#';
                 else if(tabuleiroVelha[i][j]==1) velha[i][j]='X';
-                     else velha[i][j]='O';
     }
     
     /**
