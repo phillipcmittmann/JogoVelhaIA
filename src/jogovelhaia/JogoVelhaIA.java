@@ -173,7 +173,7 @@ public class JogoVelhaIA {
             	geracao++;
             	System.out.println("Geração: " + geracao);
             	
-                Populacao populacao = new Populacao(180, tamanhoCromossomo);
+                Populacao populacao = new Populacao(100, tamanhoCromossomo);
                 
             	int resultado = 0;
 

@@ -47,18 +47,14 @@ class Populacao {
         Random rand = new Random();
         Cromossomo[] novaPopulacao = new Cromossomo[tamanhoPopulacao];
         
-        // Seleciona os melhores cromossomos
         Cromossomo[] melhores = selecionarMelhores(this.tamanhoPopulacao / 2);
         
         for (int i = 0; i < this.tamanhoPopulacao; i++) {
-            // Seleciona dois pais aleatórios da elite
             Cromossomo pai1 = melhores[rand.nextInt(melhores.length)];
             Cromossomo pai2 = melhores[rand.nextInt(melhores.length)];
             
-            // Realiza o crossover usando o método da classe Cromossomo
             novaPopulacao[i] = pai1.crossover(pai2);
             
-            // Aplica mutação ao filho gerado
             novaPopulacao[i].mutar(taxaMutacao);
         }
         
@@ -69,17 +65,15 @@ class Populacao {
         Arrays.sort(cromossomos, (a, b) -> Double.compare(b.getAptidao(), a.getAptidao()));
 
         Cromossomo[] novaPopulacao = new Cromossomo[tamanhoPopulacao];
-        System.arraycopy(cromossomos, 0, novaPopulacao, 0, quantidadeElite); // Preserva a elite
+        System.arraycopy(cromossomos, 0, novaPopulacao, 0, quantidadeElite);
 
         Random rand = new Random();
         for (int i = quantidadeElite; i < tamanhoPopulacao; i++) {
-            // Crossover entre dois cromossomos da elite
             int pai1 = rand.nextInt(quantidadeElite);
             int pai2 = rand.nextInt(quantidadeElite);
-            novaPopulacao[i] = cromossomos[pai1].crossover(cromossomos[pai2]); // Gera o filho
+            novaPopulacao[i] = cromossomos[pai1].crossover(cromossomos[pai2]);
 
-            // Aplica mutação ao filho
-            novaPopulacao[i].mutar(0.05); // Pode ajustar a taxa de mutação
+            novaPopulacao[i].mutar(0.05);
         }
 
         cromossomos = novaPopulacao;
