@@ -15,16 +15,15 @@ public class Neuronio {
 
     public Neuronio() {
     	this.pesos = new double[9];
-        this.bias = (Math.random() * 2) - 1;  // Inicializa o viés com valores entre -1 e 1 (não entre -1 e 2)
+        this.bias = (Math.random() * 2) - 1;
 
-        // Usando distribuição normal de Xavier (para Sigmoid)
         for (int i = 0; i < 9; i++) {
-            this.pesos[i] = (Math.random() * 2) - 1;  // Inicializa os pesos com valores entre -1 e 1
+            this.pesos[i] = (Math.random() * 2) - 1;
         }
     }
 
     public double sigmoide(double x) {
-        return 1 / (1 + Math.exp(-x));  // Função sigmoide
+        return 1 / (1 + Math.exp(-x));
     }
 
     public static int escolherMelhorJogada(Individuo individuo, int[][] tabuleiro) {
@@ -33,16 +32,14 @@ public class Neuronio {
         int melhorPosicao = -1;
         double melhorValor = -Double.MAX_VALUE;
 
-        // Itera sobre as saídas da rede neural e escolhe a posição com o maior valor de saída
         for (int i = 0; i < jogada.length; i++) {
-            // Verifica se a posição está vazia e se a jogada é melhor
             if (tabuleiro[i / 3][i % 3] == 0 && jogada[i] > melhorValor) {
                 melhorValor = jogada[i];
                 melhorPosicao = i;
             }
         }
 
-        return melhorPosicao;  // Retorna a melhor posição
+        return melhorPosicao;
     }
 
     public double[] getPesos() {
@@ -88,19 +85,17 @@ public class Neuronio {
     }
 
     public double[] calcularSaida(double[] entradas) {
-        double[] saida = new double[9];  // A saída tem 9 valores, correspondendo às 9 células do tabuleiro
+        double[] saida = new double[9];
         double soma;
 
-        // Para cada posição do tabuleiro, calcula a soma ponderada (peso * entrada) + viés
         for (int i = 0; i < 9; i++) {
             soma = 0.0;
-            soma += entradas[i] * pesos[i];  // Soma ponderada das entradas
-            soma += bias;  // Adiciona o viés
+            soma += entradas[i] * pesos[i];
+            soma += bias;
 
-            // Aplica a função sigmoide para gerar o valor de saída
-            saida[i] = sigmoide(soma);  // Função de ativação para cada saída
+            saida[i] = sigmoide(soma);
         }
 
-        return saida;  // Retorna o vetor de saídas
+        return saida;
     }
 }
